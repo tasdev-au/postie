@@ -74,6 +74,15 @@ class USPS extends Provider
             'FIRST_CLASS_MAIL_LARGE_POSTCARDS' => 'USPS First-Class Mail Large Postcards',
             'FIRST_CLASS_PACKAGE_SERVICE_RETAIL' => 'USPS First-Class Package Service - Retail',
 
+            'GROUND_ADVANTAGE' => 'USPS Ground Advantage',
+            'GROUND_ADVANTAGE_CUBIC' => 'USPS Ground Advantage Cubic',
+            'GROUND_ADVANTAGE_HOLD_FOR_PICKUP' => 'USPS Ground Advantage Hold For Pickup',
+            'GROUND_ADVANTAGE_CUBIC_HOLD_FOR_PICKUP' => 'USPS Ground Advantage Cubic Hold For Pickup',
+            'GROUND_ADVANTAGE_HAZMAT' => 'USPS Ground Advantage HAZMAT',
+            'GROUND_ADVANTAGE_CUBIC_HAZMAT' => 'USPS Ground Advantage Cubic HAZMAT',
+            'GROUND_ADVANTAGE_PARCEL_LOCKER' => 'USPS Ground Advantage Parcel Locker',
+            'GROUND_ADVANTAGE_CUBIC_PARCEL_LOCKER' => 'USPS Ground Advantage Cubic Parcel Locker',
+
             'STANDARD_PARCEL_POST' => 'USPS Standard Parcel Post',
             'MEDIA_MAIL_PARCEL' => 'USPS Media Mail Parcel',
             'LIBRARY_MAIL_PARCEL' => 'USPS Library Mail Parcel',
@@ -160,31 +169,17 @@ class USPS extends Provider
         //
         // TESTING
         //
-        // $country = Commerce::getInstance()->countries->getCountryByIso('US');
-        // $administrativeArea = Commerce::getInstance()->administrativeAreas->getadministrativeAreaByAbbreviation($country->id, 'CA');
+        // Domestic
+        // $storeLocation = TestingHelper::getTestAddress('US', ['locality' => 'Cupertino']);
+        // $order->shippingAddress = TestingHelper::getTestAddress('US', ['locality' => 'Mountain View'], $order);
 
-        // $storeLocation = new craft\elements\Address();
-        // $storeLocation->addressLine1 = 'One Infinite Loop';
-        // $storeLocation->locality = 'Cupertino';
-        // $storeLocation->postalCode = '95014';
-        // $storeLocation->administrativeAreaId = $administrativeArea->id;
-        // $storeLocation->countryId = $country->id;
+        // Canada
+        // $storeLocation = TestingHelper::getTestAddress('CA', ['locality' => 'Toronto']);
+        // $order->shippingAddress = TestingHelper::getTestAddress('CA', ['locality' => 'Montreal'], $order);
 
-        // $order->shippingAddress->addressLine1 = '1600 Amphitheatre Parkway';
-        // $order->shippingAddress->locality = 'Mountain View';
-        // $order->shippingAddress->postalCode = '94043';
-        // $order->shippingAddress->administrativeAreaId = $administrativeArea->id;
-        // $order->shippingAddress->countryId = $country->id;
-
-        // // International
-        // // $country = Commerce::getInstance()->countries->getCountryByIso('CA');
-        // // $administrativeArea = Commerce::getInstance()->administrativeAreas->getadministrativeAreaByAbbreviation($country->id, 'ON');
-
-        // // $order->shippingAddress->addressLine1 = '80 Spadina Ave';
-        // // $order->shippingAddress->locality = 'Toronto';
-        // // $order->shippingAddress->postalCode = 'M5V 2J4';
-        // // $order->shippingAddress->administrativeAreaId = $administrativeArea->id;
-        // // $order->shippingAddress->countryId = $country->id;
+        // EU
+        // $storeLocation = TestingHelper::getTestAddress('GB', ['locality' => 'London']);
+        // $order->shippingAddress = TestingHelper::getTestAddress('GB', ['locality' => 'Dunchurch'], $order);
         //
         //
         //
@@ -224,6 +219,14 @@ class USPS extends Provider
                 $client->setInternationalCall(true);
                 $client->addExtraOption('Revision', 2);
 
+                // We need to fetch the full country name
+                $countryName = null;
+                $countryInfo = Craft::$app->getAddresses()->getCountryRepository()->get($order->shippingAddress->countryCode);
+
+                if ($countryInfo) {
+                    $countryName = $countryInfo->getName();
+                }
+
                 foreach ($packedBoxes->getSerializedPackedBoxList() as $packedBox) {
                     $package = new RatePackage();
                     $package->setPounds($packedBox['weight']);
@@ -231,15 +234,14 @@ class USPS extends Provider
                     $package->setField('Machinable', 'True');
                     $package->setField('MailType', 'Package');
                     $package->setField('ValueOfContents', $order->getTotalSaleAmount());
-                    $package->setField('Country', $order->shippingAddress->countryCode);
+                    $package->setField('Country', $countryName);
 
                     $package->setField('Container', RatePackage::CONTAINER_RECTANGULAR);
 
                     // Mismatched on purpose!
-                    $package->setField('Width', $packedBox['height']);
-                    $package->setField('Length', $packedBox['width']);
-                    $package->setField('Height', $packedBox['length']);
-                    $package->setField('Girth', round($packedBox['length'] * 2 + $packedBox['height'] * 2));
+                    $package->setField('Width', (int)$packedBox['height']);
+                    $package->setField('Length', (int)$packedBox['width']);
+                    $package->setField('Height', (int)$packedBox['length']);
 
                     $package->setField('OriginZip', $this->_parseZipCode($storeLocation->postalCode));
                     $package->setField('CommercialFlag', 'N');
@@ -454,6 +456,15 @@ class USPS extends Provider
                 'FIRST_CLASS_MAIL_LARGE_POSTCARDS' => '15',
                 'FIRST_CLASS_PACKAGE_SERVICE_RETAIL' => '61',
 
+                'GROUND_ADVANTAGE' => '1058',
+                'GROUND_ADVANTAGE_CUBIC' => '1096',
+                'GROUND_ADVANTAGE_HOLD_FOR_PICKUP' => '2058',
+                'GROUND_ADVANTAGE_CUBIC_HOLD_FOR_PICKUP' => '2096',
+                'GROUND_ADVANTAGE_HAZMAT' => '4058',
+                'GROUND_ADVANTAGE_CUBIC_HAZMAT' => '4096',
+                'GROUND_ADVANTAGE_PARCEL_LOCKER' => '6058',
+                'GROUND_ADVANTAGE_CUBIC_PARCEL_LOCKER' => '6096',
+
                 'STANDARD_PARCEL_POST' => '4',
                 'MEDIA_MAIL_PARCEL' => '6',
                 'LIBRARY_MAIL_PARCEL' => '7',
@@ -493,8 +504,6 @@ class USPS extends Provider
         }
 
         return array_search($code, $services);
-        $string = StringHelper::toSnakeCase($string);
-        return strtoupper($string);
     }
 
     private function _parseZipCode($zip): string

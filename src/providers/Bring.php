@@ -29,31 +29,51 @@ class Bring extends Provider
     public static function getServiceList(): array
     {
         return [
-            'SERVICEPAKKE' => 'Klimanøytral Servicepakke',
-            'PA_DOREN' => 'På Døren',
-            'BPAKKE_DOR-DOR' => 'Bedriftspakke',
-            'EKSPRESS09' => 'Bedriftspakke Ekspress-Over natten',
-            'MINIPAKKE' => 'Minipakke',
+            // https://developer.bring.com/files/Labelspecifications_for_Bring_v_4_991.pdf
+            // Bring Parcels AB
+            '0330' => 'Business Parcel',
+            '0331' => 'Business Parcel Return',
+            '0332' => 'Business Parcel Bulk',
+            '0333' => 'Business Parcel Return Bulk',
+            '0334' => 'Express Nordic 0900 Bulk',
+            '0335' => 'Express Nordic 0900',
+            '0336' => 'Business Pallet',
+            '0339' => 'Express Nordic 0900 Pallet',
+            '0340' => 'PickUp Parcel',
+            '0341' => 'PickUp Parcel Return',
+            '0342' => 'PickUp Parcel Bulk',
+            '0343' => 'PickUp Parcel Return Bulk',
+            '0345' => 'Home Delivery Mailbox',
+            '0348' => 'Home Delivery Parcel Return',
+            '0349' => 'Home Delivery Parcel',
+            
+            // Parcel Domestic
+            '1000' => 'Bedriftspakke',
+            '1002' => 'Bedriftspakke Ekspress-Over natten',
+            '1020' => 'Postens pallelaster',
+            '1202' => 'Klimanøytral Servicepakke',
+            '1206' => 'Bedriftspakke postkontor',
+            '1312' => 'På Døren Prosjekt',
+            '1736' => 'På Døren',
+            '1885' => 'Abonnementstransport',
+            '1988' => 'Bedriftspakke Flerkolli',
+            '3110' => 'Minipakke',
+
+            '3570' => 'Pakke i postkassen',
+            '3584' => 'Pakke i postkassen (sporbar)',
+            '4850' => 'Ekspress neste dag',
+            '5000' => 'Pakke til bedrift',
+            '5100' => 'Stykkgods til bedrift',
+            '5300' => 'Partigods til bedrift',
+            '5400' => 'Pall til bedrift',
+            '5600' => 'Pakke levert hjem',
+            '5800' => 'Pakke til hentested',
+            '9000' => 'Retur pakke fra bedrift',
+            '9100' => 'Retur stykkgods fra bedrift',
+            '9300' => 'Retur fra hentested',
+            '9600' => 'Returekspress',
             'MAIL' => 'Brev',
-            'A-POST' => 'A-Prioritert',
-            'B-POST' => 'B-Økonomi',
-            'SMAAPAKKER_A-POST' => 'Småpakker A-Post',
-            'SMAAPAKKER_B-POST' => 'Småpakker B-Post',
-            'QUICKPACK_SAMEDAY' => 'QuickPack SameDay',
-            'QUICKPACK_OVER_NIGHT_0900' => 'Quickpack Over Night 0900',
-            'QUICKPACK_OVER_NIGHT_1200' => 'Quickpack Over Night 1200',
-            'QUICKPACK_DAY_CERTAIN' => 'Quickpack Day Certain',
-            'QUICKPACK_EXPRESS_ECONOMY' => 'Quickpack Express Economy',
-            'CARGO_GROUPAGE' => 'Cargo',
-            'CARRYON_BUSINESS' => 'CarryOn Business',
-            'CARRYON_HOMESHOPPING' => 'CarryOn HomeShopping',
-            'HOMEDELIVERY_CURBSIDE_DAG' => 'HomeDelivery Curb Side',
-            'COURIER_VIP' => 'Bud VIP',
-            'COURIER_1H' => 'Bud 1 time',
-            'COURIER_2H' => 'Bud 2 timer',
-            'COURIER_4H' => 'Bud 4 timer',
-            'COURIER_6H' => 'Bud 6 timer',
-            'OX' => 'Oil Express',
+            'VIP25' => 'Budbil VIP',
         ];
     }
 
@@ -86,45 +106,58 @@ class Bring extends Provider
         //
         // TESTING
         //
-        // $country = Commerce::getInstance()->countries->getCountryByIso('NO');
-
-        // $storeLocation = new craft\elements\Address();
-        // $storeLocation->postalCode = '0470';
-        // $storeLocation->countryId = $country->id;
-
-        // $administrativeArea = Commerce::getInstance()->administrativeAreas->getadministrativeAreaByAbbreviation($country->id, 'NO');
-        // $order->shippingAddress->postalCode = '0151';
-        // $order->shippingAddress->countryId = $country->id;
+        // $storeLocation = TestingHelper::getTestAddress('NO', ['locality' => 'Oslo']);
+        // $order->shippingAddress = TestingHelper::getTestAddress('NO', ['locality' => 'Bergen'], $order);
         //
         // 
         //
 
         try {
             $response = [];
+            $packages = [];
+
+            foreach ($packedBoxes->getSerializedPackedBoxList() as $index => $packedBox) {
+                $packages[] = [
+                    'grossWeight' => $packedBox['weight'],
+                    'height' => $packedBox['height'],
+                    'width' => $packedBox['width'],
+                    'length' => $packedBox['length'],
+                    'id' => $index + 1,
+                ];
+            }
 
             $payload = [
-                'frompostalcode' => $storeLocation->postalCode ?? '',
-                'fromcountry' => $storeLocation->countryCode ?? '',
-                'topostalcode' => $order->shippingAddress->postalCode ?? '',
-                'tocountry' => $order->shippingAddress->countryCode ?? '',
-                'weight' => $packedBoxes->getTotalWeight(),
+                'consignments' => [
+                    [
+                        'id' => '1',
+                        'fromCountryCode' => $storeLocation->countryCode ?? '',
+                        'fromPostalCode' => $storeLocation->postalCode ?? '',
+                        'toCountryCode' => $order->shippingAddress->countryCode ?? '',
+                        'toPostalCode' => $order->shippingAddress->postalCode ?? '',
+                        'packages' => $packages,
+                    ],
+                ],
 
                 // Tells whether the parcel is delivered at a post office when it is shipped.
                 // A surcharge will be applied for SERVICEPAKKE and BPAKKE_DOR-DOR
-                'postingatpostoffice' => 'false',
+                'postingAtPostoffice' => false,
             ];
 
             // Restrict the services we fetch, is enabled
             if ($this->restrictServices) {
-                $payload['product'] = array_keys(ArrayHelper::where($this->services, 'enabled', true));
+                $payload['consignments'][0]['products'] = array_map(function($item) {
+                    return ['id' => (string)$item];
+                }, array_keys(ArrayHelper::where($this->services, 'enabled', true)));
             } else {
-                $payload['product'] = array_keys(self::getServiceList());
+                $payload['consignments'][0]['products'] = array_map(function($item) {
+                    return ['id' => (string)$item];
+                }, array_keys(self::getServiceList()));
             }
 
             $this->beforeSendPayload($this, $payload, $order);
 
-            $response = $this->_request('GET', 'products', [
-                'query' => $payload,
+            $response = $this->_request('POST', 'products', [
+                'json' => $payload,
             ]);
 
             $services = $response['consignments'][0]['products'] ?? [];
@@ -198,17 +231,32 @@ class Bring extends Provider
 
             // Create a test payload
             $payload = [
-                'frompostalcode' => $sender->postalCode ?? '',
-                'fromcountry' => $sender->countryCode ?? '',
-                'topostalcode' => $recipient->postalCode ?? '',
-                'tocountry' => $recipient->countryCode ?? '',
-                'postingatpostoffice' => 'false',
-                'weight' => $packedBox['weight'],
-                'product' => ['PA_DOREN'],
+                'consignments' => [
+                    [
+                        'id' => '1',
+                        'fromCountryCode' => $sender->countryCode ?? '',
+                        'fromPostalCode' => $sender->postalCode ?? '',
+                        'toCountryCode' => $recipient->countryCode ?? '',
+                        'toPostalCode' => $recipient->postalCode ?? '',
+                        'packages' => [
+                            [
+                                'grossWeight' => $packedBox['weight'],
+                                'id' => '1',
+                            ],
+                        ],
+                        'products' => [
+                            ['id' => 'PA_DOREN'],
+                        ]
+                    ],
+                ],
+
+                // Tells whether the parcel is delivered at a post office when it is shipped.
+                // A surcharge will be applied for SERVICEPAKKE and BPAKKE_DOR-DOR
+                'postingAtPostoffice' => false,
             ];
 
-            $response = $this->_request('GET', 'products', [
-                'query' => $payload,
+            $response = $this->_request('POST', 'products', [
+                'json' => $payload,
             ]);
         } catch (Throwable $e) {
             Provider::error($this, Craft::t('postie', 'API error: “{message}” {file}:{line}', [

@@ -1,5 +1,31 @@
 # Changelog
 
+## 3.1.7 - 2024-04-10
+
+### Added
+- Add dimensions to packages for Bring.
+
+### Changed
+- Update Bring services to latest available (2023+).
+- Change minimum packed box weight to 1 gram (converted to the providers weight unit).
+
+### Fixed
+- Fix an error with USPS international shipments.
+
+## 3.1.6 - 2024-03-18
+
+### Changed
+- Update Bring API compatibility.
+- Allow `Provider::EVENT_BEFORE_PACK_ORDER` to override the box packing provider.
+
+### Fixed
+- Fix an error with New Zealand post settings.
+
+## 3.1.5 - 2024-03-04
+
+### Changed
+- The variants-shippable check now only queries 100 variants by default.
+
 ## 3.1.4 - 2023-10-25
 
 ### Changed
